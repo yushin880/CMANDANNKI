@@ -1,10 +1,32 @@
+1．スパース形式でイメージを作成
+空のイメージなので、すぐに created と表示されます。
+hdiutil create -o /tmp/monterey -size 16g -layout SPUD -fs HFS+J -type SPARSE
+2．作成したイメージをマウント
+hdiutil attach /tmp/monterey.sparseimage -noverify -mountpoint /Volumes/installMonterey
+Finderに installMonterey というボリュームが表示されます。
+3．Montereyのインストール可能なイメージを作成
+sudo "/Applications/Install macOS Monterey.app/Contents/Resources/createinstallmedia" --volume /Volumes/installMonterey --nointeraction
+※パスワードを求められたら、Macのログインパスワードを入力します。入力中は文字が表示されません。
+4．ボリュームを取り外す
+hdiutil eject -force /Volumes/installMonterey
+5．CDR形式に変換してデスクトップに作成
+hdiutil convert /tmp/monterey.sparseimage -format UDTO -o ~/Desktop/installMonterey.cdr
+6．デスクトップのファイル名を変更
+Finderでデスクトップにある、
+installMonterey.cdr
+を、
+installMonterey.iso
+に変更する。
+「拡張子を変更しますか？」と聞かれたら、**「.isoを使用」**を選択。
+7．一時ファイルを削除
+rm -f /tmp/monterey.sparseimage
+最後に、不要ならFinderの「macOS Montereyインストール.app」も削除します。
+最終的にデスクトップに installMonterey.iso があれば完成。
 
 
-ls -ld /Applications/*.app
-
-その結果に Install macOS Monterey.app があれば、次のISO作成手順へ進める。
 
 
+  
 
 
 
@@ -13,52 +35,7 @@ ls -ld /Applications/*.app
 
 
 
-#!/bin/bash
 
-set -e
 
-INSTALLER="/Applications/Install macOS Monterey.app"
-WORK="/tmp/MontereyISO"
-DMG="$WORK/Monterey.dmg"
-ISO="$HOME/Desktop/Monterey.iso"
 
-if [ ! -d "$INSTALLER" ]; then
-    echo "エラー：Install macOS Monterey.app が見つかりません。"
-    echo "アプリケーションフォルダにインストーラーがあるか確認してください。"
-    exit 1
-fi
-
-rm -rf "$WORK"
-mkdir -p "$WORK"
-
-echo "① ISO用ディスクイメージを作成中..."
-hdiutil create -o "$DMG" -size 16g -layout SPUD -fs HFS+J
-
-echo "② ディスクイメージをマウント中..."
-MOUNT_INFO=$(hdiutil attach "$DMG" -noverify -nobrowse)
-VOLUME=$(echo "$MOUNT_INFO" | awk '/\/Volumes\// {print substr($0, index($0,$3)); exit}')
-
-if [ -z "$VOLUME" ] || [ ! -d "$VOLUME" ]; then
-    echo "エラー：ディスクイメージをマウントできませんでした。"
-    exit 1
-fi
-
-echo "③ Montereyインストーラーを書き込み中..."
-sudo "$INSTALLER/Contents/Resources/createinstallmedia" \
-    --volume "$VOLUME" \
-    --nointeraction
-
-echo "④ ディスクイメージを取り外し中..."
-hdiutil detach "$VOLUME"
-
-echo "⑤ ISO形式へ変換中..."
-rm -f "$ISO"
-hdiutil convert "$DMG" -format UDTO -o "$WORK/Monterey"
-
-echo "⑥ デスクトップへ保存中..."
-mv "$WORK/Monterey.cdr" "$ISO"
-
-echo ""
-echo "完了！"
-echo "ISOの場所：$ISO"
-open -R "$ISO"
+ChatGPT は間違えることがあります。重要な情報は確認してください。
