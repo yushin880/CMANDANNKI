@@ -1,0 +1,64 @@
+
+
+ls -ld /Applications/*.app
+
+その結果に Install macOS Monterey.app があれば、次のISO作成手順へ進める。
+
+
+
+
+
+
+
+
+
+
+#!/bin/bash
+
+set -e
+
+INSTALLER="/Applications/Install macOS Monterey.app"
+WORK="/tmp/MontereyISO"
+DMG="$WORK/Monterey.dmg"
+ISO="$HOME/Desktop/Monterey.iso"
+
+if [ ! -d "$INSTALLER" ]; then
+    echo "エラー：Install macOS Monterey.app が見つかりません。"
+    echo "アプリケーションフォルダにインストーラーがあるか確認してください。"
+    exit 1
+fi
+
+rm -rf "$WORK"
+mkdir -p "$WORK"
+
+echo "① ISO用ディスクイメージを作成中..."
+hdiutil create -o "$DMG" -size 16g -layout SPUD -fs HFS+J
+
+echo "② ディスクイメージをマウント中..."
+MOUNT_INFO=$(hdiutil attach "$DMG" -noverify -nobrowse)
+VOLUME=$(echo "$MOUNT_INFO" | awk '/\/Volumes\// {print substr($0, index($0,$3)); exit}')
+
+if [ -z "$VOLUME" ] || [ ! -d "$VOLUME" ]; then
+    echo "エラー：ディスクイメージをマウントできませんでした。"
+    exit 1
+fi
+
+echo "③ Montereyインストーラーを書き込み中..."
+sudo "$INSTALLER/Contents/Resources/createinstallmedia" \
+    --volume "$VOLUME" \
+    --nointeraction
+
+echo "④ ディスクイメージを取り外し中..."
+hdiutil detach "$VOLUME"
+
+echo "⑤ ISO形式へ変換中..."
+rm -f "$ISO"
+hdiutil convert "$DMG" -format UDTO -o "$WORK/Monterey"
+
+echo "⑥ デスクトップへ保存中..."
+mv "$WORK/Monterey.cdr" "$ISO"
+
+echo ""
+echo "完了！"
+echo "ISOの場所：$ISO"
+open -R "$ISO"
